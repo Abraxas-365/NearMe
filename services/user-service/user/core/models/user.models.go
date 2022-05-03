@@ -11,7 +11,6 @@ type User struct {
 	Name     Name      `bson:"name" json:"name,omitempty"`
 	Password Password  `bson:"password" json:"password,omitempty"`
 	Email    Email     `bson:"email" json:"email,omitempty"`
-	Role     Role      `bson:"role" json:"role"`
 	Created  time.Time `bson:"created" json:"created"`
 	Edit     time.Time `bson:"edited" json:"edited"`
 }
@@ -20,7 +19,6 @@ type User struct {
 func (u *User) New() {
 	u.ID = uuid.New()
 	u.Password = u.Password.Encrypt()
-	u.Role = "U"
 	u.Created = time.Now()
 	u.Edit = time.Now()
 }
@@ -42,7 +40,6 @@ func (u *User) ToPublic() UserPublic {
 	userPublic := UserPublic{
 		ID:   u.ID,
 		Name: u.Name,
-		Role: u.Role,
 	}
 	return userPublic
 }

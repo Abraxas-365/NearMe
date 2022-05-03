@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *userHandler) Login(c fiber.Ctx) error {
+func (h *userHandler) Login(c *fiber.Ctx) error {
 	body := struct {
 		Email    models.Email    `json:"email"`
 		Password models.Password `json:"password"`
