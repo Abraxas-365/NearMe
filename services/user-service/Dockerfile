@@ -19,11 +19,7 @@ WORKDIR /nearMe-user
 # Copy the source from the current directory to the working Directory inside the container
 COPY . .
 
-# Download all the dependencies
-# RUN go get -d -v ./...
-
 # Install the package
-# RUN go install -v ./...
 RUN go mod tidy
 
 # Build the Go app
