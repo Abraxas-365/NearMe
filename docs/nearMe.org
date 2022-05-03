@@ -1,0 +1,71 @@
+
+
+* Usuarios
+
+** Usuario-comun
+
+** Promotor
+
+** Trabajador
+
+** Admin
+
+
+
+* Funcionalidad
+
+** Promotor - generar codigo de invitacion
+    - ver usuarios que se meten al codigo
+
+** Generar entradas QR
+** Leer entradas
+
+** Reseva de parte de usuarios
+
+** Lista de discotecas
+
+** Admin - Asignar usuario como promotor
+
+
+
+* Microservicios
+
+** Usuarios
+
+** Reserva
+- hacer reseva de parte de usuario
+- generar reserva de Promotor
+
+** QR
+- generacion de qr
+- lectura de qr
+
+** Discoteca
+- lista de discotecas
+- ubicacion
+- path a static
+
+
+
+
+
+
+
+* Entidades
+
+** Usurio
+
+| Nombre   |   |
+| email    |   |
+| role     |   |
+| edad     |   |
+| password |   |
+
+** Discoteca
+
+| Nombre       |   |
+| ubication X  |   |
+| ubicacion Y  |   |
+| Promotores   |   |
+| Trabajadores |   |
+| Imagenes     |   |
