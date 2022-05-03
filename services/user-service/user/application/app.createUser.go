@@ -17,7 +17,11 @@ func (a *userApplication) Create(new models.User) (models.UserPublic, error) {
 	a.mqPublisher.PublishEvent(event)
 
 	/*Login user*/
+	logedUser, err := a.Login(new.Email, new.Password)
+	if err != nil {
+		return models.UserPublic{}, err
+	}
 
-	return models.UserPublic{}, nil
+	return logedUser, nil
 
 }
