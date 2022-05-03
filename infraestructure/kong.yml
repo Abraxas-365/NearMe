@@ -1,0 +1,19 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+
+ - name: nearme-user
+   host: nearme-user
+   port: 3000
+   path: /api/users
+   routes:
+     - name: nearme-user-service-routes
+       paths:
+         - /api/users/
+       methods:
+         - POST
+         - GET
+         - UPDATE
+       strip_path: true
+
