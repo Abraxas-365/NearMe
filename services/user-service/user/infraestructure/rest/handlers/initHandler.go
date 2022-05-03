@@ -7,7 +7,8 @@ import (
 )
 
 type UserHandler interface {
-	CreateUser(c *fiber.Ctx) error
+	Create(c *fiber.Ctx) error
+	Login(c *fiber.Ctx) error
 }
 
 type userHandler struct {
