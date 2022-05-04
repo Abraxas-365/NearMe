@@ -3,7 +3,7 @@ package service
 import "github.com/google/uuid"
 
 func (s *bookingService) CanBooked(userId uuid.UUID, nightclubId uuid.UUID) error {
-	nightclub, err := s.nightclubRepo.GetNightclub(nightclubId)
+	nightclub, err := s.nightclubApp.GetNightclub(nightclubId)
 	if err != nil {
 		return err
 	}

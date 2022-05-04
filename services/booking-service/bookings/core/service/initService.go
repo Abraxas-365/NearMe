@@ -1,7 +1,7 @@
 package service
 
 import (
-	"booking-service/nightclub/core/ports"
+	"booking-service/nightclub/application"
 	"errors"
 
 	"github.com/google/uuid"
@@ -16,11 +16,11 @@ type BookingService interface {
 }
 
 type bookingService struct {
-	nightclubRepo ports.NightclubRepository
+	nightclubApp application.NightclubApplication
 }
 
-func NewNightclubService(nightclubRepo ports.NightclubRepository) BookingService {
+func NewNightclubService(nightclubApp application.NightclubApplication) BookingService {
 	return &bookingService{
-		nightclubRepo,
+		nightclubApp,
 	}
 }
