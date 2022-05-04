@@ -49,6 +49,5 @@ func (u *User) ToPublic() UserPublic {
 type UserPublic struct {
 	ID    uuid.UUID `bson:"_id,omitempty" json:"id"`
 	Name  Name      `bson:"name" json:"name,omitempty"`
-	Role  Role      `bson:"role" json:"role"`
 	Token string    `bson:"token" json:"token"`
 }

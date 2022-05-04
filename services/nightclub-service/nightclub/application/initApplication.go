@@ -1,4 +1,4 @@
-package repository
+package application
 
 import (
 	"nightclub-service/nightclub/core/events"
@@ -7,9 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-type NightclubRepository interface {
+type NightclubApplication interface {
 	Create(new models.Nightclub) (events.Event, error)
-	IsNightclubInDb(nightclubId uuid.UUID) bool
 	AddPromotor(promotorId uuid.UUID) error
 	DeletePromotor(promotorId uuid.UUID) error
 	DeleteNightclub(promotorId uuid.UUID) error

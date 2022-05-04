@@ -7,7 +7,7 @@ import (
 
 func (r *userService) Auth(email models.Email, password models.Password) (models.UserPublic, error) {
 
-	user, err := r.userRepo.GetUserByEmail(email)
+	user, err := r.userRepo.GetUserByEmail(string(email))
 	if err != nil {
 		return models.UserPublic{}, ErrUserNotFound
 	}

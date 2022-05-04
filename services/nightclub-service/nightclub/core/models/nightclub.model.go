@@ -8,6 +8,7 @@ type Nightclub struct {
 	Password     Password     `bson:"password" json:"password"`
 	NeedPromotor bool         `bson:"need_promotor" json:"need_promotor"`
 	Promotors    []*uuid.UUID `bson:"promotors,omitempty" json:"promotor"`
+	// TODO working days
 }
 
 type NightclubPublic struct {
