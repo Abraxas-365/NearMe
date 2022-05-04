@@ -7,6 +7,6 @@ import (
 
 type UserRepository interface {
 	CreateUser(models.User) (events.Event, error)
-	IsUserExist(email string) bool
+	IsUserInDb(email string) bool
 	GetUserByEmail(email string) (models.User, error)
 }

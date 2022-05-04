@@ -7,15 +7,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (r *mongoRepository) GetUserByEmail(email string) (models.User, error) {
+//TODO create function
+func (r *mongoRepository) IsUserInDb(email string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 	collection := r.client.Database(r.database).Collection(r.collection)
-	user := models.User{}
+	check := new(models.User)
 	filter := bson.M{"email": email}
-	if err := collection.FindOne(ctx, filter).Decode(&user); err != nil {
-		return models.User{}, err
+	if err := collection.FindOne(ctx, filter).Decode(&check); err != nil {
+		return false
 	}
-
-	return user, nil
+	return true
 }

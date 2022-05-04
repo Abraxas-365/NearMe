@@ -6,7 +6,7 @@ services:
   kong:
     image: kong:2.5.0-alpine
     hostname: kong
-    container_name: kong
+    container_name: kong-nearme
     environment:
       KONG_DATABASE: 'off'
       KONG_PROXY_ACCESS_LOG: '/dev/stdout'
@@ -22,16 +22,13 @@ services:
       - "8001:8001"
       - "8444:8444"
     volumes:
-        - ./infrastructure-config:/opt/kong
-    depends_on:
-      - mongo
+        - ./infraestructure:/opt/kong
     networks:
       - nearme
 
-
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: rabbitmq
+    container_name: rabbitmq-nearme
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin
@@ -44,7 +41,7 @@ services:
     networks:
         - nearme
 
-  mongo:
+  mongo-user:
     image: mongo
     restart: always
     environment:
@@ -61,13 +58,13 @@ services:
   nearme-user:
     environment:
       MQ_URI: amqp://admin:admin@rabbitmq:5672/
-      MONGODB_URI: mongodb://root:example@mongo:27017/
+      MONGODB_URI: mongodb://root:example@mongo-user:27017/
     build: ./services/user-service/.
     restart: always
     ports:
       - 3000
     depends_on:
-      - mongo
+      - mongo-user
     networks:
       - nearme
     entrypoint:
@@ -79,5 +76,5 @@ services:
     command: ./main
 
 networks:
-  zetting:
+  nearme:
     driver: bridge
