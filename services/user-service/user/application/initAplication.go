@@ -17,7 +17,7 @@ type userApplication struct {
 	userService service.UserService
 }
 
-func newUserApplication(userRepo ports.UserRepository, userService service.UserService, mqPublisher ports.UserMQPublisher) UserApplication {
+func NewUserApplication(userRepo ports.UserRepository, userService service.UserService, mqPublisher ports.UserMQPublisher) UserApplication {
 	userApplication := &userApplication{
 		userRepo,
 		mqPublisher,

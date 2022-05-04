@@ -16,11 +16,12 @@ type User struct {
 }
 
 //All users start as normal users
-func (u *User) New() {
+func (u *User) New() *User {
 	u.ID = uuid.New()
 	u.Password = u.Password.Encrypt()
 	u.Created = time.Now()
 	u.Edit = time.Now()
+	return u
 }
 
 func (u *User) Validate() error {

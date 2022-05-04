@@ -2,14 +2,14 @@ package application
 
 import "user-service/user/core/models"
 
-func (a *userApplication) Create(new models.User) (models.UserPublic, error) {
+func (a *userApplication) Create(newUser models.User) (models.UserPublic, error) {
 	/*Check if user can be created*/
-	if err := a.userService.CanCreateUser(new); err != nil {
+	if err := a.userService.CanCreateUser(newUser); err != nil {
 		return models.UserPublic{}, err
 	}
 
 	/*Create user*/
-	event, err := a.userRepo.CreateUser(new)
+	event, err := a.userRepo.CreateUser(*newUser.New())
 	if err != nil {
 		return models.UserPublic{}, err
 	}
@@ -17,7 +17,7 @@ func (a *userApplication) Create(new models.User) (models.UserPublic, error) {
 	a.mqPublisher.PublishEvent(event)
 
 	/*Login user*/
-	logedUser, err := a.Login(new.Email, new.Password)
+	logedUser, err := a.Login(newUser.Email, newUser.Password)
 	if err != nil {
 		return models.UserPublic{}, err
 	}
