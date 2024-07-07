@@ -1,4 +1,5 @@
 use actix_web::{HttpResponse, ResponseError};
+use bcrypt::BcryptError;
 use reqwest::StatusCode;
 use thiserror::Error;
 
@@ -9,6 +10,9 @@ pub enum ApiError {
 
     #[error("Failed to parse response: {0}")]
     ParseError(#[from] serde_json::Error),
+
+    #[error("Bcrypt error {0}")]
+    BcryptError(#[from] BcryptError),
 
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
@@ -22,6 +26,7 @@ impl ResponseError for ApiError {
                     .body(self.to_string())
             }
             ApiError::ParseError(_) => HttpResponse::InternalServerError().body(self.to_string()),
+            ApiError::BcryptError(_) => HttpResponse::InternalServerError().body(self.to_string()),
             ApiError::UnexpectedError(_) => {
                 HttpResponse::InternalServerError().body(self.to_string())
             }

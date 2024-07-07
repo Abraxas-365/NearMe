@@ -22,3 +22,4 @@ chrono = "0.4.38"
 thiserror = "1.0.60"
 reqwest = { version = "0.11", features = ["json"] }
 uuid = { version = "1.0", features = ["v4"] }
+bcrypt = "0.15.1"
