@@ -3,8 +3,7 @@ use crate::modules::product::ports::Repository;
 use crate::modules::product::{Price, Product, ProductImage};
 use crate::utils::database::PostgresRepository;
 use async_trait::async_trait;
-use sqlx::{PgPool, Postgres, Transaction};
-use std::sync::Arc;
+use sqlx::{Postgres, Transaction};
 
 #[async_trait]
 impl Repository for PostgresRepository {
