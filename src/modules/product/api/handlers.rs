@@ -37,7 +37,7 @@ pub async fn get_product_details_by_store(
 
 // Handler for creating a new product
 #[derive(Deserialize)]
-struct CreateProductRequest {
+pub struct CreateProductRequest {
     category_id: i32,
     name: String,
     description: String,
