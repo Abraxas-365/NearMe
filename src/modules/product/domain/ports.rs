@@ -12,6 +12,7 @@ pub trait Repository {
     async fn update(&self, product: Product) -> Result<Product, ApiError>;
     async fn find_by_category(&self, category_id: i32) -> Result<Vec<Product>, ApiError>;
     async fn find_by_store(&self, store_id: i32) -> Result<Vec<Product>, ApiError>;
+    async fn find_by_id(&self, id: i32) -> Result<Product, ApiError>;
 
     async fn add_images(&self, image: &[ProductImage]) -> Result<(), ApiError>;
     async fn delete_image(&self, id: i32) -> Result<(), ApiError>;
