@@ -39,10 +39,11 @@ impl Repository for PostgresRepository {
         }
     }
 
-    async fn delete(&self, id: i32) -> Result<(), ApiError> {
-        let query = "DELETE FROM products WHERE id = $1 RETURNING id;";
+    async fn delete(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        let query = "DELETE FROM products WHERE id = $1 AND store_id = $2 RETURNING id;";
         let result = sqlx::query(query)
             .bind(id)
+            .bind(store_id)
             .fetch_optional(&*self.pg_pool)
             .await
             .map_err(ApiError::from)?;
@@ -57,21 +58,26 @@ impl Repository for PostgresRepository {
         }
     }
 
-    async fn delete_by_category(&self, category_id: i32) -> Result<(), ApiError> {
-        let query = "DELETE FROM products WHERE category_id = $1;";
+    async fn delete_by_category(&self, category_id: i32, store_id: i32) -> Result<(), ApiError> {
+        let query = "DELETE FROM products WHERE category_id = $1 AND store_id = $2;";
         sqlx::query(query)
             .bind(category_id)
+            .bind(store_id)
             .execute(&*self.pg_pool)
             .await
             .map_err(ApiError::from)?;
         Ok(())
     }
 
-    async fn update(&self, product: Product) -> Result<Product, ApiError> {
+    async fn update(&self, product: Product, store_id: i32) -> Result<Product, ApiError> {
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
         let query = "
             UPDATE products
             SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5
-            WHERE id = $6
+            WHERE id = $6 AND store_id = $7
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -81,6 +87,7 @@ impl Repository for PostgresRepository {
             .bind(&product.description)
             .bind(product.store_id)
             .bind(product.id)
+            .bind(store_id)
             .fetch_optional(&*self.pg_pool)
             .await
             .map_err(ApiError::from)?;
@@ -133,11 +140,17 @@ impl Repository for PostgresRepository {
         }
     }
 
-    async fn add_images(&self, images: &[ProductImage]) -> Result<(), ApiError> {
+    async fn add_images(&self, images: &[ProductImage], store_id: i32) -> Result<(), ApiError> {
         let mut tx: Transaction<'_, Postgres> =
             self.pg_pool.begin().await.map_err(ApiError::from)?;
 
         for image in images {
+            // Ensure each image belongs to a product from the correct store
+            let product = self.find_by_id(image.product_id).await?;
+            if product.store_id != store_id {
+                return Err(ApiError::Forbidden("Store ID mismatch".into()));
+            }
+
             let query = "
                 INSERT INTO product_images (product_id, url)
                 VALUES ($1, $2);
@@ -154,17 +167,42 @@ impl Repository for PostgresRepository {
         Ok(())
     }
 
-    async fn delete_image(&self, id: i32) -> Result<(), ApiError> {
-        let query = "DELETE FROM product_images WHERE id = $1;";
-        sqlx::query(query)
+    async fn delete_image(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        // First fetch the image to ensure it belongs to the correct store
+        let query = "SELECT * FROM product_images WHERE id = $1;";
+        let image = sqlx::query_as::<_, ProductImage>(query)
             .bind(id)
-            .execute(&*self.pg_pool)
+            .fetch_optional(&*self.pg_pool)
             .await
             .map_err(ApiError::from)?;
-        Ok(())
+
+        if let Some(image) = image {
+            // Check if the product_id belongs to the correct store
+            let product = self.find_by_id(image.product_id).await?;
+            if product.store_id != store_id {
+                return Err(ApiError::Forbidden("Store ID mismatch".into()));
+            }
+
+            // Proceed to delete
+            let delete_query = "DELETE FROM product_images WHERE id = $1;";
+            sqlx::query(delete_query)
+                .bind(id)
+                .execute(&*self.pg_pool)
+                .await
+                .map_err(ApiError::from)?;
+            Ok(())
+        } else {
+            Err(ApiError::NotFound(format!(
+                "Image with id {} not found",
+                id
+            )))
+        }
     }
 
     async fn find_images_by_product(&self, product_id: i32) -> Result<Vec<ProductImage>, ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(product_id).await?;
+
         let query = "SELECT * FROM product_images WHERE product_id = $1;";
         let images = sqlx::query_as::<_, ProductImage>(query)
             .bind(product_id)
@@ -174,7 +212,17 @@ impl Repository for PostgresRepository {
         images.map_err(ApiError::from)
     }
 
-    async fn delete_images_by_product(&self, product_id: i32) -> Result<(), ApiError> {
+    async fn delete_images_by_product(
+        &self,
+        product_id: i32,
+        store_id: i32,
+    ) -> Result<(), ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(product_id).await?;
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
         let query = "DELETE FROM product_images WHERE product_id = $1;";
         sqlx::query(query)
             .bind(product_id)
@@ -184,7 +232,13 @@ impl Repository for PostgresRepository {
         Ok(())
     }
 
-    async fn add_price(&self, price: Price) -> Result<(), ApiError> {
+    async fn add_price(&self, price: Price, store_id: i32) -> Result<(), ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(price.product_id).await?;
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
         let query = "
             INSERT INTO prices (product_id, name, price, discount, is_default)
             VALUES ($1, $2, $3, $4, $5)
@@ -203,17 +257,42 @@ impl Repository for PostgresRepository {
         Ok(())
     }
 
-    async fn delete_price(&self, id: i32) -> Result<(), ApiError> {
-        let query = "DELETE FROM prices WHERE id = $1;";
-        sqlx::query(query)
+    async fn delete_price(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        // First fetch the price to ensure it belongs to a product from the correct store
+        let query = "SELECT * FROM prices WHERE id = $1;";
+        let price = sqlx::query_as::<_, Price>(query)
             .bind(id)
-            .execute(&*self.pg_pool)
+            .fetch_optional(&*self.pg_pool)
             .await
             .map_err(ApiError::from)?;
-        Ok(())
+
+        if let Some(price) = price {
+            // Check if the product_id belongs to the correct store
+            let product = self.find_by_id(price.product_id).await?;
+            if product.store_id != store_id {
+                return Err(ApiError::Forbidden("Store ID mismatch".into()));
+            }
+
+            // Proceed to delete
+            let delete_query = "DELETE FROM prices WHERE id = $1;";
+            sqlx::query(delete_query)
+                .bind(id)
+                .execute(&*self.pg_pool)
+                .await
+                .map_err(ApiError::from)?;
+            Ok(())
+        } else {
+            Err(ApiError::NotFound(format!(
+                "Price with id {} not found",
+                id
+            )))
+        }
     }
 
     async fn find_price_by_product(&self, product_id: i32) -> Result<Vec<Price>, ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(product_id).await?;
+
         let query = "SELECT * FROM prices WHERE product_id = $1;";
         let prices = sqlx::query_as::<_, Price>(query)
             .bind(product_id)
@@ -223,7 +302,13 @@ impl Repository for PostgresRepository {
         prices.map_err(ApiError::from)
     }
 
-    async fn update_price(&self, price: Price) -> Result<Price, ApiError> {
+    async fn update_price(&self, price: Price, store_id: i32) -> Result<Price, ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(price.product_id).await?;
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
         let query = "
             UPDATE prices
             SET product_id = $1, name = $2, price = $3, discount = $4, is_default = $5
@@ -243,7 +328,17 @@ impl Repository for PostgresRepository {
         result.map_err(ApiError::from)
     }
 
-    async fn delete_price_by_product(&self, product_id: i32) -> Result<(), ApiError> {
+    async fn delete_price_by_product(
+        &self,
+        product_id: i32,
+        store_id: i32,
+    ) -> Result<(), ApiError> {
+        // Ensure the product belongs to the correct store
+        let product = self.find_by_id(product_id).await?;
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
         let query = "DELETE FROM prices WHERE product_id = $1;";
         sqlx::query(query)
             .bind(product_id)

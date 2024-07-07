@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{web, HttpResponse};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -41,7 +42,7 @@ pub struct CreateProductRequest {
     category_id: i32,
     name: String,
     description: String,
-    store_id: i32,
+    store_id: i32, //TODO dlete this
 }
 
 pub async fn create_product(
@@ -63,9 +64,9 @@ pub async fn create_product(
 pub async fn delete_product(
     service: web::Data<Arc<Service>>,
     product_id: web::Path<i32>,
+    session: Session,
 ) -> Result<HttpResponse, ApiError> {
-    service.delete(*product_id).await?;
+    let store_id = session.get::<i32>("user_id").unwrap().unwrap(); //TODO
+    service.delete(*product_id, store_id).await?;
     Ok(HttpResponse::NoContent().finish())
 }
-
-// Add routes to actix-web

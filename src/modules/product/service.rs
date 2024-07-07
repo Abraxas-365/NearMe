@@ -69,20 +69,24 @@ impl Service {
         Ok(product)
     }
 
-    pub async fn delete(&self, id: i32) -> Result<(), ApiError> {
-        self.product_repository.delete(id).await?;
+    pub async fn delete(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        self.product_repository.delete(id, store_id).await?;
         Ok(())
     }
 
-    pub async fn delete_by_category(&self, category_id: i32) -> Result<(), ApiError> {
+    pub async fn delete_by_category(
+        &self,
+        category_id: i32,
+        store_id: i32,
+    ) -> Result<(), ApiError> {
         self.product_repository
-            .delete_by_category(category_id)
+            .delete_by_category(category_id, store_id)
             .await?;
         Ok(())
     }
 
-    pub async fn update(&self, product: Product) -> Result<Product, ApiError> {
-        let product = self.product_repository.update(product).await?;
+    pub async fn update(&self, product: Product, store_id: i32) -> Result<Product, ApiError> {
+        let product = self.product_repository.update(product, store_id).await?;
         Ok(product)
     }
 
@@ -117,31 +121,35 @@ impl Service {
         Ok(images)
     }
 
-    pub async fn add_images(&self, image: &[ProductImage]) -> Result<(), ApiError> {
-        self.product_repository.add_images(image).await?;
+    pub async fn add_images(&self, image: &[ProductImage], store_id: i32) -> Result<(), ApiError> {
+        self.product_repository.add_images(image, store_id).await?;
         Ok(())
     }
 
-    pub async fn delete_image(&self, id: i32) -> Result<(), ApiError> {
-        self.product_repository.delete_image(id).await?;
+    pub async fn delete_image(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        self.product_repository.delete_image(id, store_id).await?;
         Ok(())
     }
 }
 
 impl Service {
-    pub async fn add_price(&self, price: Price) -> Result<(), ApiError> {
-        self.product_repository.add_price(price).await?;
+    pub async fn add_price(&self, price: Price, store_id: i32) -> Result<(), ApiError> {
+        self.product_repository.add_price(price, store_id).await?;
         Ok(())
     }
 
-    pub async fn delete_price(&self, id: i32) -> Result<(), ApiError> {
-        self.product_repository.delete_price(id).await?;
+    pub async fn delete_price(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
+        self.product_repository.delete_price(id, store_id).await?;
         Ok(())
     }
 
-    pub async fn delete_price_by_product(&self, product_id: i32) -> Result<(), ApiError> {
+    pub async fn delete_price_by_product(
+        &self,
+        product_id: i32,
+        store_id: i32,
+    ) -> Result<(), ApiError> {
         self.product_repository
-            .delete_price_by_product(product_id)
+            .delete_price_by_product(product_id, store_id)
             .await?;
         Ok(())
     }
@@ -154,8 +162,11 @@ impl Service {
         Ok(prices)
     }
 
-    pub async fn update_price(&self, price: Price) -> Result<Price, ApiError> {
-        let price = self.product_repository.update_price(price).await?;
+    pub async fn update_price(&self, price: Price, store_id: i32) -> Result<Price, ApiError> {
+        let price = self
+            .product_repository
+            .update_price(price, store_id)
+            .await?;
         Ok(price)
     }
 }
