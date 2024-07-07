@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductDetail {
+    pub product: Product,
+    pub images: Vec<ProductImage>,
+    pub prices: Vec<Price>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Product {
     pub id: i32,

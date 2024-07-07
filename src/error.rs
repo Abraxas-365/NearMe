@@ -1,13 +1,9 @@
 use actix_web::{HttpResponse, ResponseError};
 use bcrypt::BcryptError;
-use reqwest::StatusCode;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("HTTP request failed with status: {0}")]
-    HttpError(StatusCode),
-
     #[error("Failed to parse response: {0}")]
     ParseError(#[from] serde_json::Error),
 
@@ -16,19 +12,48 @@ pub enum ApiError {
 
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] sqlx::Error),
+
+    #[error("Not found: {0}")]
+    NotFound(String),
+
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
+    #[error("Conflict: {0}")]
+    Conflict(String),
+
+    #[error("Service unavailable: {0}")]
+    ServiceUnavailable(String),
 }
 
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            ApiError::HttpError(status) => {
-                HttpResponse::build(actix_web::http::StatusCode::from_u16(status.as_u16()).unwrap())
-                    .body(self.to_string())
-            }
             ApiError::ParseError(_) => HttpResponse::InternalServerError().body(self.to_string()),
             ApiError::BcryptError(_) => HttpResponse::InternalServerError().body(self.to_string()),
+            ApiError::ParseError(_) => HttpResponse::InternalServerError().json(self.to_string()),
             ApiError::UnexpectedError(_) => {
-                HttpResponse::InternalServerError().body(self.to_string())
+                HttpResponse::InternalServerError().json(self.to_string())
+            }
+            ApiError::DatabaseError(_) => {
+                HttpResponse::InternalServerError().json(self.to_string())
+            }
+            ApiError::NotFound(_) => HttpResponse::NotFound().json(self.to_string()),
+            ApiError::BadRequest(_) => HttpResponse::BadRequest().json(self.to_string()),
+            ApiError::Forbidden(_) => HttpResponse::Forbidden().json(self.to_string()),
+            ApiError::Unauthorized(_) => HttpResponse::Unauthorized().json(self.to_string()),
+            ApiError::Conflict(_) => HttpResponse::Conflict().json(self.to_string()),
+            ApiError::ServiceUnavailable(_) => {
+                HttpResponse::ServiceUnavailable().json(self.to_string())
             }
         }
     }

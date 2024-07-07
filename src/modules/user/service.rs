@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use bcrypt::{hash, verify};
-use reqwest::StatusCode;
 
 use crate::error::ApiError;
 
@@ -20,7 +19,9 @@ impl Service {
 impl Service {
     pub async fn create(&self, username: &str, password: &str) -> Result<User, ApiError> {
         if let Ok(_) = self.user_repository.find_by_username(username).await {
-            return Err(ApiError::HttpError(StatusCode::UNAUTHORIZED));
+            return Err(ApiError::Conflict(
+                "User with this username already exists.".to_string(),
+            ));
         }
         let password_hash = hash(password, bcrypt::DEFAULT_COST)?;
         self.user_repository.create(username, &password_hash).await
@@ -30,7 +31,9 @@ impl Service {
         let user = self.user_repository.find_by_username(username).await?;
         match verify(password, &user.password)? {
             true => Ok(user),
-            false => Err(ApiError::HttpError(StatusCode::UNAUTHORIZED)),
+            false => Err(ApiError::Unauthorized(
+                "Invalid username or password.".to_string(),
+            )),
         }
     }
 }

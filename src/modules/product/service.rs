@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::error::ApiError;
 
-use super::{ports::Repository, Price, Product, ProductImage};
+use super::{ports::Repository, Price, Product, ProductDetail, ProductImage};
 
 pub struct Service {
     product_repository: Arc<dyn Repository>,
@@ -11,6 +11,55 @@ pub struct Service {
 impl Service {
     pub fn new(product_repository: Arc<dyn Repository>) -> Self {
         Self { product_repository }
+    }
+}
+
+impl Service {
+    pub async fn get_product_detail(&self, product_id: i32) -> Result<ProductDetail, ApiError> {
+        let product = self.find_by_id(product_id).await?;
+        let images = self.find_images_by_product(product_id).await?;
+        let prices = self.find_price_by_product(product_id).await?;
+        Ok(ProductDetail {
+            product,
+            images,
+            prices,
+        })
+    }
+
+    pub async fn get_product_details_by_category(
+        &self,
+        category_id: i32,
+    ) -> Result<Vec<ProductDetail>, ApiError> {
+        let products = self.find_by_category(category_id).await?;
+        let mut details = Vec::new();
+        for product in products {
+            let images = self.find_images_by_product(product.id).await?;
+            let prices = self.find_price_by_product(product.id).await?;
+            details.push(ProductDetail {
+                product,
+                images,
+                prices,
+            });
+        }
+        Ok(details)
+    }
+
+    pub async fn get_product_details_by_store(
+        &self,
+        store_id: i32,
+    ) -> Result<Vec<ProductDetail>, ApiError> {
+        let products = self.find_by_store(store_id).await?;
+        let mut details = Vec::new();
+        for product in products {
+            let images = self.find_images_by_product(product.id).await?;
+            let prices = self.find_price_by_product(product.id).await?;
+            details.push(ProductDetail {
+                product,
+                images,
+                prices,
+            });
+        }
+        Ok(details)
     }
 }
 
@@ -43,6 +92,11 @@ impl Service {
             .find_by_category(category_id)
             .await?;
         Ok(products)
+    }
+
+    pub async fn find_by_id(&self, id: i32) -> Result<Product, ApiError> {
+        let product = self.product_repository.find_by_id(id).await?;
+        Ok(product)
     }
 
     pub async fn find_by_store(&self, store_id: i32) -> Result<Vec<Product>, ApiError> {

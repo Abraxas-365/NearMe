@@ -24,10 +24,7 @@ impl Service {
         &self,
         store_id: i32,
     ) -> Result<Vec<Category>, ApiError> {
-        let categories = self
-            .category_repository
-            .find_categories_form_store(store_id)
-            .await?;
+        let categories = self.category_repository.find_by_store(store_id).await?;
         Ok(categories)
     }
 
