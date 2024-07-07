@@ -153,4 +153,9 @@ impl Service {
             .await?;
         Ok(prices)
     }
+
+    pub async fn update_price(&self, price: Price) -> Result<Price, ApiError> {
+        let price = self.product_repository.update_price(price).await?;
+        Ok(price)
+    }
 }
