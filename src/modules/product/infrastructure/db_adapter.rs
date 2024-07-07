@@ -3,6 +3,7 @@ use crate::modules::product::ports::Repository;
 use crate::modules::product::{Price, Product, ProductImage};
 use crate::utils::database::PostgresRepository;
 use async_trait::async_trait;
+use sqlx::postgres::PgDatabaseError;
 use sqlx::{Postgres, Transaction};
 
 #[async_trait]
@@ -22,7 +23,20 @@ impl Repository for PostgresRepository {
             .fetch_one(&*self.pg_pool)
             .await;
 
-        result.map_err(ApiError::from)
+        match result {
+            Ok(product) => Ok(product),
+            Err(e) => {
+                if let Some(db_error) = e.as_database_error() {
+                    if let Some(pg_error) = db_error.try_downcast_ref::<PgDatabaseError>() {
+                        if pg_error.code() == "23505" {
+                            // unique_violation
+                            return Err(ApiError::Conflict("SKU already exists".into()));
+                        }
+                    }
+                }
+                Err(ApiError::from(e))
+            }
+        }
     }
 
     async fn delete(&self, id: i32) -> Result<(), ApiError> {

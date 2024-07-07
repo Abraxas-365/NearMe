@@ -12,7 +12,7 @@ CREATE TABLE categories (
 
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
-    sku VARCHAR(255) NOT NULL,
+    sku VARCHAR(255) UNIQUE NOT NULL,
     category_id INTEGER NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,

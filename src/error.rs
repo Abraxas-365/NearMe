@@ -40,7 +40,6 @@ impl ResponseError for ApiError {
         match self {
             ApiError::ParseError(_) => HttpResponse::InternalServerError().body(self.to_string()),
             ApiError::BcryptError(_) => HttpResponse::InternalServerError().body(self.to_string()),
-            ApiError::ParseError(_) => HttpResponse::InternalServerError().json(self.to_string()),
             ApiError::UnexpectedError(_) => {
                 HttpResponse::InternalServerError().json(self.to_string())
             }
