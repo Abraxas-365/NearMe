@@ -17,6 +17,7 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     store_id INTEGER NOT NULL,
+    visible BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (store_id) REFERENCES stores(id)
 );

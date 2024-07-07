@@ -17,10 +17,17 @@ pub struct Product {
     pub name: String,
     pub description: String,
     pub store_id: i32,
+    pub visible: bool,
 }
 
 impl Product {
-    pub fn new(category_id: i32, name: &str, description: &str, store_id: i32) -> Product {
+    pub fn new(
+        category_id: i32,
+        name: &str,
+        description: &str,
+        store_id: i32,
+        visible: bool,
+    ) -> Product {
         Self {
             id: 0, //when saved in the db it will get the id from the auto increment
             sku: Product::generate_sku(name),
@@ -28,6 +35,7 @@ impl Product {
             name: name.into(),
             description: description.into(),
             store_id,
+            visible,
         }
     }
 
@@ -45,6 +53,16 @@ impl Product {
         let unique_id = Uuid::new_v4().to_string();
         format!("PROD-{}-{}", short_name, unique_id)
     }
+}
+
+//DTO
+#[derive(Deserialize)]
+pub struct ProductUpdateRequest {
+    pub sku: Option<String>,
+    pub category_id: Option<i32>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub visible: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

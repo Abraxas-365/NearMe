@@ -10,8 +10,8 @@ use sqlx::{Postgres, Transaction};
 impl Repository for PostgresRepository {
     async fn create(&self, product: Product) -> Result<Product, ApiError> {
         let query = "
-            INSERT INTO products (sku, category_id, name, description, store_id)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO products (sku, category_id, name, description, store_id, visible)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -20,6 +20,7 @@ impl Repository for PostgresRepository {
             .bind(&product.name)
             .bind(&product.description)
             .bind(product.store_id)
+            .bind(product.visible)
             .fetch_one(&*self.pg_pool)
             .await;
 
@@ -76,8 +77,8 @@ impl Repository for PostgresRepository {
 
         let query = "
             UPDATE products
-            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5
-            WHERE id = $6 AND store_id = $7
+            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5, visible = $6
+            WHERE id = $7 AND store_id = $8
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -86,6 +87,7 @@ impl Repository for PostgresRepository {
             .bind(&product.name)
             .bind(&product.description)
             .bind(product.store_id)
+            .bind(product.visible)
             .bind(product.id)
             .bind(store_id)
             .fetch_optional(&*self.pg_pool)
@@ -200,9 +202,6 @@ impl Repository for PostgresRepository {
     }
 
     async fn find_images_by_product(&self, product_id: i32) -> Result<Vec<ProductImage>, ApiError> {
-        // Ensure the product belongs to the correct store
-        let product = self.find_by_id(product_id).await?;
-
         let query = "SELECT * FROM product_images WHERE product_id = $1;";
         let images = sqlx::query_as::<_, ProductImage>(query)
             .bind(product_id)
@@ -290,9 +289,6 @@ impl Repository for PostgresRepository {
     }
 
     async fn find_price_by_product(&self, product_id: i32) -> Result<Vec<Price>, ApiError> {
-        // Ensure the product belongs to the correct store
-        let product = self.find_by_id(product_id).await?;
-
         let query = "SELECT * FROM prices WHERE product_id = $1;";
         let prices = sqlx::query_as::<_, Price>(query)
             .bind(product_id)

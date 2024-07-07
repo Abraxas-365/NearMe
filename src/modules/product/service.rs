@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::error::ApiError;
 
-use super::{ports::Repository, Price, Product, ProductDetail, ProductImage};
+use super::{ports::Repository, Price, Product, ProductDetail, ProductImage, ProductUpdateRequest};
 
 pub struct Service {
     product_repository: Arc<dyn Repository>,
@@ -85,9 +85,36 @@ impl Service {
         Ok(())
     }
 
-    pub async fn update(&self, product: Product, store_id: i32) -> Result<Product, ApiError> {
-        let product = self.product_repository.update(product, store_id).await?;
-        Ok(product)
+    pub async fn update_product(
+        &self,
+        product_id: i32,
+        update_request: ProductUpdateRequest,
+        store_id: i32,
+    ) -> Result<Product, ApiError> {
+        let mut product = self.product_repository.find_by_id(product_id).await?;
+
+        if product.store_id != store_id {
+            return Err(ApiError::Forbidden("Store ID mismatch".into()));
+        }
+
+        if let Some(sku) = update_request.sku {
+            product.sku = sku;
+        }
+        if let Some(category_id) = update_request.category_id {
+            product.category_id = category_id;
+        }
+        if let Some(name) = update_request.name {
+            product.name = name;
+        }
+        if let Some(description) = update_request.description {
+            product.description = description;
+        }
+        if let Some(visible) = update_request.visible {
+            product.visible = visible;
+        }
+
+        let updated_product = self.product_repository.update(product, store_id).await?;
+        Ok(updated_product)
     }
 
     pub async fn find_by_category(&self, category_id: i32) -> Result<Vec<Product>, ApiError> {
