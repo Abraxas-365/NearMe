@@ -1,10 +1,14 @@
 use actix_web::{HttpResponse, ResponseError};
+use bcrypt::BcryptError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("Failed to parse response: {0}")]
     ParseError(#[from] serde_json::Error),
+
+    #[error("Bcrypt error {0}")]
+    BcryptError(#[from] BcryptError),
 
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
@@ -34,6 +38,8 @@ pub enum ApiError {
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         match self {
+            ApiError::ParseError(_) => HttpResponse::InternalServerError().body(self.to_string()),
+            ApiError::BcryptError(_) => HttpResponse::InternalServerError().body(self.to_string()),
             ApiError::ParseError(_) => HttpResponse::InternalServerError().json(self.to_string()),
             ApiError::UnexpectedError(_) => {
                 HttpResponse::InternalServerError().json(self.to_string())
