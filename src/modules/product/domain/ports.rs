@@ -30,3 +30,8 @@ pub trait Repository {
     async fn delete_price_by_product(&self, product_id: i32, store_id: i32)
         -> Result<(), ApiError>;
 }
+
+#[async_trait]
+pub trait ImageRepository {
+    async fn post_presigned_url(&self, key: String) -> Result<String, ApiError>;
+}

@@ -1,16 +1,28 @@
 use std::sync::Arc;
 
+use uuid::Uuid;
+
 use crate::error::ApiError;
 
-use super::{ports::Repository, Price, Product, ProductDetail, ProductImage, ProductUpdateRequest};
+use super::{
+    ports::{ImageRepository, Repository},
+    Price, Product, ProductDetail, ProductImage, ProductUpdateRequest,
+};
 
 pub struct Service {
     product_repository: Arc<dyn Repository>,
+    image_repository: Arc<dyn ImageRepository>,
 }
 
 impl Service {
-    pub fn new(product_repository: Arc<dyn Repository>) -> Self {
-        Self { product_repository }
+    pub fn new(
+        product_repository: Arc<dyn Repository>,
+        image_repository: Arc<dyn ImageRepository>,
+    ) -> Self {
+        Self {
+            product_repository,
+            image_repository,
+        }
     }
 }
 
@@ -156,6 +168,16 @@ impl Service {
     pub async fn delete_image(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
         self.product_repository.delete_image(id, store_id).await?;
         Ok(())
+    }
+
+    pub async fn post_presigned_url(
+        &self,
+        product_id: i32,
+        store_id: i32,
+    ) -> Result<String, ApiError> {
+        let key = format!("{}/{}/{}", store_id, product_id, Uuid::new_v4());
+        let url = self.image_repository.post_presigned_url(key).await?;
+        Ok(url)
     }
 }
 

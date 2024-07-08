@@ -24,3 +24,5 @@ reqwest = { version = "0.11", features = ["json"] }
 uuid = { version = "1.0", features = ["v4"] }
 bcrypt = "0.15.1"
 actix-session = {version = "0.9.0", features = ["redis-rs-session"]}
+aws-sdk-s3 = "1.40.0"
+aws-config = "1.5.4"
