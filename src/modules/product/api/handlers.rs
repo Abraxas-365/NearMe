@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::{
     error::ApiError,
-    modules::product::{Product, ProductUpdateRequest, Service},
+    modules::product::{Product, ProductImage, ProductUpdateRequest, Service},
 };
 
 pub async fn get_product_detail(
@@ -73,11 +73,6 @@ pub async fn delete_product(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[derive(Deserialize)]
-pub struct UpdateVisibilityRequest {
-    visible: bool,
-}
-
 pub async fn update_product(
     service: web::Data<Arc<Service>>,
     product_id: web::Path<i32>,
@@ -89,4 +84,49 @@ pub async fn update_product(
         .update_product(*product_id, update_request.into_inner(), store_id)
         .await?;
     Ok(HttpResponse::Ok().json(updated_product))
+}
+
+// Handler for adding images to a product
+#[derive(Deserialize)]
+pub struct AddImagesRequest {
+    pub product_id: i32,
+    pub urls: Vec<String>,
+}
+pub async fn add_images(
+    service: web::Data<Arc<Service>>,
+    add_images_request: web::Json<AddImagesRequest>,
+    session: Session,
+) -> Result<HttpResponse, ApiError> {
+    let store_id = session.get::<i32>("user_id").unwrap().unwrap(); // TODO: Handle session error
+
+    let images: Vec<ProductImage> = add_images_request
+        .urls
+        .iter()
+        .map(|url| ProductImage::new(add_images_request.product_id, url))
+        .collect();
+
+    service.add_images(&images, store_id).await?;
+    Ok(HttpResponse::NoContent().finish())
+}
+
+// Handler for deleting an image
+pub async fn delete_image(
+    service: web::Data<Arc<Service>>,
+    image_id: web::Path<i32>,
+    session: Session,
+) -> Result<HttpResponse, ApiError> {
+    let store_id = session.get::<i32>("user_id").unwrap().unwrap(); // TODO: Handle session error properly
+    service.delete_image(*image_id, store_id).await?;
+    Ok(HttpResponse::NoContent().finish())
+}
+
+// Handler for generating a presigned URL for image upload
+pub async fn get_presigned_url(
+    service: web::Data<Arc<Service>>,
+    path: web::Path<(i32,)>, // product_id
+    session: Session,
+) -> Result<HttpResponse, ApiError> {
+    let store_id = session.get::<i32>("user_id").unwrap().unwrap(); // TODO: Handle session error properly
+    let url = service.post_presigned_url(path.0, store_id).await?;
+    Ok(HttpResponse::Ok().json(url))
 }
