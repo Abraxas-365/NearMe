@@ -10,8 +10,8 @@ use sqlx::{Postgres, Transaction};
 impl Repository for PostgresRepository {
     async fn create(&self, product: Product) -> Result<Product, ApiError> {
         let query = "
-            INSERT INTO products (sku, category_id, name, description, store_id, visible)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO products (sku, category_id, name, description, store_id, visible, has_multiple_prices, single_price)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -21,6 +21,8 @@ impl Repository for PostgresRepository {
             .bind(&product.description)
             .bind(product.store_id)
             .bind(product.visible)
+            .bind(product.has_multiple_prices)
+            .bind(product.single_price)
             .fetch_one(&*self.pg_pool)
             .await;
 
@@ -77,8 +79,8 @@ impl Repository for PostgresRepository {
 
         let query = "
             UPDATE products
-            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5, visible = $6
-            WHERE id = $7 AND store_id = $8
+            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5, visible = $6, has_multiple_prices = $7, single_price = $8
+            WHERE id = $9 AND store_id = $10
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -88,6 +90,8 @@ impl Repository for PostgresRepository {
             .bind(&product.description)
             .bind(product.store_id)
             .bind(product.visible)
+            .bind(product.has_multiple_prices)
+            .bind(product.single_price)
             .bind(product.id)
             .bind(store_id)
             .fetch_optional(&*self.pg_pool)

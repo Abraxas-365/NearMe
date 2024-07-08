@@ -18,6 +18,8 @@ pub struct Product {
     pub description: String,
     pub store_id: i32,
     pub visible: bool,
+    pub has_multiple_prices: bool,
+    pub single_price: Option<f64>,
 }
 
 impl Product {
@@ -29,13 +31,15 @@ impl Product {
         visible: bool,
     ) -> Product {
         Self {
-            id: 0, //when saved in the db it will get the id from the auto increment
+            id: 0, // When saved in the db it will get the id from the auto increment
             sku: Product::generate_sku(name),
             category_id,
             name: name.into(),
             description: description.into(),
             store_id,
             visible,
+            has_multiple_prices: false,
+            single_price: Some(0.00),
         }
     }
 
@@ -55,7 +59,7 @@ impl Product {
     }
 }
 
-//DTO
+// DTO
 #[derive(Deserialize)]
 pub struct ProductUpdateRequest {
     pub sku: Option<String>,
@@ -63,6 +67,8 @@ pub struct ProductUpdateRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub visible: Option<bool>,
+    pub has_multiple_prices: Option<bool>,
+    pub single_price: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -74,7 +80,7 @@ pub struct ProductImage {
 impl ProductImage {
     pub fn new(product_id: i32, url: &str) -> Self {
         Self {
-            id: 0, //when saved in the db it will get the id from the auto increment
+            id: 0, // When saved in the db it will get the id from the auto increment
             product_id,
             url: url.into(),
         }
