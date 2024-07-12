@@ -98,3 +98,38 @@ CREATE INDEX idx_order_status ON orders(status);
 CREATE INDEX idx_customer_phone ON customers(phone);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_price_id ON order_items(price_id);
+
+
+-- Store Order Types table
+CREATE TABLE store_order_types (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL,
+    order_type VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    FOREIGN KEY (store_id) REFERENCES stores(id),
+    CONSTRAINT unique_store_order_type UNIQUE (store_id, order_type),
+    CONSTRAINT valid_order_type CHECK (order_type IN ('delivery', 'on_site', 'takeaway'))
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_store_order_types ON store_order_types(store_id, order_type);
+
+
+-- Function to initialize store order types
+CREATE OR REPLACE FUNCTION initialize_store_order_types()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO store_order_types (store_id, order_type, is_active)
+    VALUES 
+        (NEW.id, 'delivery', TRUE),
+        (NEW.id, 'on_site', TRUE),
+        (NEW.id, 'takeaway', TRUE);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically initialize order types when a new store is created
+CREATE TRIGGER trigger_initialize_store_order_types
+AFTER INSERT ON stores
+FOR EACH ROW
+EXECUTE FUNCTION initialize_store_order_types();
