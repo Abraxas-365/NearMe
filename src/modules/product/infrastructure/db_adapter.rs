@@ -9,9 +9,12 @@ use sqlx::{Postgres, Transaction};
 #[async_trait]
 impl Repository for PostgresRepository {
     async fn create(&self, product: Product) -> Result<Product, ApiError> {
+        let mut tx: Transaction<'_, Postgres> =
+            self.pg_pool.begin().await.map_err(ApiError::from)?;
+
         let query = "
-            INSERT INTO products (sku, category_id, name, description, store_id, visible, has_multiple_prices, single_price)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO products (sku, category_id, name, description, store_id, visible, has_multiple_prices)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -22,13 +25,13 @@ impl Repository for PostgresRepository {
             .bind(product.store_id)
             .bind(product.visible)
             .bind(product.has_multiple_prices)
-            .bind(product.single_price)
-            .fetch_one(&*self.pg_pool)
+            .fetch_one(&mut *tx)
             .await;
 
-        match result {
-            Ok(product) => Ok(product),
+        let product = match result {
+            Ok(product) => product,
             Err(e) => {
+                tx.rollback().await.map_err(ApiError::from)?;
                 if let Some(db_error) = e.as_database_error() {
                     if let Some(pg_error) = db_error.try_downcast_ref::<PgDatabaseError>() {
                         if pg_error.code() == "23505" {
@@ -37,9 +40,16 @@ impl Repository for PostgresRepository {
                         }
                     }
                 }
-                Err(ApiError::from(e))
+                return Err(ApiError::from(e));
             }
-        }
+        };
+
+        // Add default price
+        let default_price = Price::new(product.id, "Default", 0.00, None, true);
+        self.add_price(default_price, product.store_id).await?;
+
+        tx.commit().await.map_err(ApiError::from)?;
+        Ok(product)
     }
 
     async fn delete(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
@@ -79,8 +89,8 @@ impl Repository for PostgresRepository {
 
         let query = "
             UPDATE products
-            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5, visible = $6, has_multiple_prices = $7, single_price = $8
-            WHERE id = $9 AND store_id = $10
+            SET sku = $1, category_id = $2, name = $3, description = $4, store_id = $5, visible = $6, has_multiple_prices = $7
+            WHERE id = $8 AND store_id = $9
             RETURNING *;
         ";
         let result = sqlx::query_as::<_, Product>(query)
@@ -91,7 +101,6 @@ impl Repository for PostgresRepository {
             .bind(product.store_id)
             .bind(product.visible)
             .bind(product.has_multiple_prices)
-            .bind(product.single_price)
             .bind(product.id)
             .bind(store_id)
             .fetch_optional(&*self.pg_pool)
@@ -242,6 +251,19 @@ impl Repository for PostgresRepository {
             return Err(ApiError::Forbidden("Store ID mismatch".into()));
         }
 
+        let mut tx: Transaction<'_, Postgres> =
+            self.pg_pool.begin().await.map_err(ApiError::from)?;
+
+        if price.is_default {
+            // Set all other prices for this product to non-default
+            let update_query = "UPDATE prices SET is_default = FALSE WHERE product_id = $1;";
+            sqlx::query(update_query)
+                .bind(price.product_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(ApiError::from)?;
+        }
+
         let query = "
             INSERT INTO prices (product_id, name, price, discount, is_default)
             VALUES ($1, $2, $3, $4, $5)
@@ -253,11 +275,19 @@ impl Repository for PostgresRepository {
             .bind(price.price)
             .bind(price.discount)
             .bind(price.is_default)
-            .fetch_one(&*self.pg_pool)
+            .fetch_one(&mut *tx)
             .await;
 
-        result.map_err(ApiError::from)?;
-        Ok(())
+        match result {
+            Ok(_) => {
+                tx.commit().await.map_err(ApiError::from)?;
+                Ok(())
+            }
+            Err(e) => {
+                tx.rollback().await.map_err(ApiError::from)?;
+                Err(ApiError::from(e))
+            }
+        }
     }
 
     async fn delete_price(&self, id: i32, store_id: i32) -> Result<(), ApiError> {
@@ -309,6 +339,21 @@ impl Repository for PostgresRepository {
             return Err(ApiError::Forbidden("Store ID mismatch".into()));
         }
 
+        let mut tx: Transaction<'_, Postgres> =
+            self.pg_pool.begin().await.map_err(ApiError::from)?;
+
+        if price.is_default {
+            // Set all other prices for this product to non-default
+            let update_query =
+                "UPDATE prices SET is_default = FALSE WHERE product_id = $1 AND id != $2;";
+            sqlx::query(update_query)
+                .bind(price.product_id)
+                .bind(price.id)
+                .execute(&mut *tx)
+                .await
+                .map_err(ApiError::from)?;
+        }
+
         let query = "
             UPDATE prices
             SET product_id = $1, name = $2, price = $3, discount = $4, is_default = $5
@@ -322,10 +367,19 @@ impl Repository for PostgresRepository {
             .bind(price.discount)
             .bind(price.is_default)
             .bind(price.id)
-            .fetch_one(&*self.pg_pool)
+            .fetch_one(&mut *tx)
             .await;
 
-        result.map_err(ApiError::from)
+        match result {
+            Ok(updated_price) => {
+                tx.commit().await.map_err(ApiError::from)?;
+                Ok(updated_price)
+            }
+            Err(e) => {
+                tx.rollback().await.map_err(ApiError::from)?;
+                Err(ApiError::from(e))
+            }
+        }
     }
 
     async fn delete_price_by_product(

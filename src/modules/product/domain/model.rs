@@ -19,7 +19,6 @@ pub struct Product {
     pub store_id: i32,
     pub visible: bool,
     pub has_multiple_prices: bool,
-    pub single_price: Option<f64>,
 }
 
 impl Product {
@@ -39,7 +38,6 @@ impl Product {
             store_id,
             visible,
             has_multiple_prices: false,
-            single_price: Some(0.00),
         }
     }
 
@@ -68,7 +66,6 @@ pub struct ProductUpdateRequest {
     pub description: Option<String>,
     pub visible: Option<bool>,
     pub has_multiple_prices: Option<bool>,
-    pub single_price: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
