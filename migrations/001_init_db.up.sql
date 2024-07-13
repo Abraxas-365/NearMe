@@ -54,28 +54,6 @@ CREATE TABLE customers (
     email VARCHAR(255) UNIQUE
 );
 
--- Store Order Types table
-CREATE TABLE store_order_types (
-    id SERIAL PRIMARY KEY,
-    store_id INTEGER NOT NULL,
-    order_type VARCHAR(50) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    FOREIGN KEY (store_id) REFERENCES stores(id),
-    CONSTRAINT unique_store_order_type UNIQUE (store_id, order_type),
-    CONSTRAINT valid_order_type CHECK (order_type IN ('delivery', 'on_site', 'takeaway'))
-);
-
--- Store Order Statuses table
-CREATE TABLE store_order_statuses (
-    id SERIAL PRIMARY KEY,
-    store_id INTEGER NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    FOREIGN KEY (store_id) REFERENCES stores(id),
-    CONSTRAINT unique_store_order_status UNIQUE (store_id, status),
-    CONSTRAINT valid_status CHECK (status IN ('pending', 'accepted', 'ready_for_delivery', 'completed'))
-);
-
 -- Orders table (updated with status timestamps)
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
@@ -125,47 +103,6 @@ CREATE INDEX idx_order_status ON orders(status);
 CREATE INDEX idx_customer_phone ON customers(phone);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_price_id ON order_items(price_id);
-CREATE INDEX idx_store_order_types ON store_order_types(store_id, order_type);
-CREATE INDEX idx_store_order_statuses ON store_order_statuses(store_id, status);
-
--- Function to initialize store order types
-CREATE OR REPLACE FUNCTION initialize_store_order_types()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO store_order_types (store_id, order_type, is_active)
-    VALUES 
-        (NEW.id, 'delivery', TRUE),
-        (NEW.id, 'on_site', TRUE),
-        (NEW.id, 'takeaway', TRUE);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger to automatically initialize order types when a new store is created
-CREATE TRIGGER trigger_initialize_store_order_types
-AFTER INSERT ON stores
-FOR EACH ROW
-EXECUTE FUNCTION initialize_store_order_types();
-
--- Function to initialize store order statuses
-CREATE OR REPLACE FUNCTION initialize_store_order_statuses()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO store_order_statuses (store_id, status, is_active)
-    VALUES 
-        (NEW.id, 'pending', TRUE),
-        (NEW.id, 'accepted', TRUE),
-        (NEW.id, 'ready_for_delivery', TRUE),
-        (NEW.id, 'completed', TRUE);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger to automatically initialize order statuses when a new store is created
-CREATE TRIGGER trigger_initialize_store_order_statuses
-AFTER INSERT ON stores
-FOR EACH ROW
-EXECUTE FUNCTION initialize_store_order_statuses();
 
 -- Function to update order status timestamps
 CREATE OR REPLACE FUNCTION update_order_status_timestamp()
