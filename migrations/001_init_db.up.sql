@@ -12,7 +12,7 @@ CREATE TABLE categories (
     FOREIGN KEY (store_id) REFERENCES stores(id)
 );
 
--- Products table (removed single_price)
+-- Products table
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
     sku VARCHAR(255) UNIQUE NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE product_images (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- Prices table (modified to handle single prices as well)
+-- Prices table
 CREATE TABLE prices (
     id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL,
@@ -54,7 +54,29 @@ CREATE TABLE customers (
     email VARCHAR(255) UNIQUE
 );
 
--- Orders table
+-- Store Order Types table
+CREATE TABLE store_order_types (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL,
+    order_type VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    FOREIGN KEY (store_id) REFERENCES stores(id),
+    CONSTRAINT unique_store_order_type UNIQUE (store_id, order_type),
+    CONSTRAINT valid_order_type CHECK (order_type IN ('delivery', 'on_site', 'takeaway'))
+);
+
+-- Store Order Statuses table
+CREATE TABLE store_order_statuses (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    FOREIGN KEY (store_id) REFERENCES stores(id),
+    CONSTRAINT unique_store_order_status UNIQUE (store_id, status),
+    CONSTRAINT valid_status CHECK (status IN ('pending', 'accepted', 'ready_for_delivery', 'completed'))
+);
+
+-- Orders table (updated with status timestamps)
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     store_id INTEGER NOT NULL,
@@ -65,9 +87,14 @@ CREATE TABLE orders (
     order_type VARCHAR(50) NOT NULL,
     table_number INTEGER,
     delivery_address TEXT,
+    pending_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    accepted_time TIMESTAMP,
+    ready_for_delivery_time TIMESTAMP,
+    completed_time TIMESTAMP,
     FOREIGN KEY (store_id) REFERENCES stores(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id),
     CONSTRAINT check_order_type CHECK (order_type IN ('delivery', 'on_site', 'takeaway')),
+    CONSTRAINT check_order_status CHECK (status IN ('pending', 'accepted', 'ready_for_delivery', 'completed')),
     CONSTRAINT check_table_number CHECK (
         (order_type = 'on_site' AND table_number IS NOT NULL) OR
         (order_type != 'on_site' AND table_number IS NULL)
@@ -98,22 +125,8 @@ CREATE INDEX idx_order_status ON orders(status);
 CREATE INDEX idx_customer_phone ON customers(phone);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_price_id ON order_items(price_id);
-
-
--- Store Order Types table
-CREATE TABLE store_order_types (
-    id SERIAL PRIMARY KEY,
-    store_id INTEGER NOT NULL,
-    order_type VARCHAR(50) NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    FOREIGN KEY (store_id) REFERENCES stores(id),
-    CONSTRAINT unique_store_order_type UNIQUE (store_id, order_type),
-    CONSTRAINT valid_order_type CHECK (order_type IN ('delivery', 'on_site', 'takeaway'))
-);
-
--- Create index for faster queries
 CREATE INDEX idx_store_order_types ON store_order_types(store_id, order_type);
-
+CREATE INDEX idx_store_order_statuses ON store_order_statuses(store_id, status);
 
 -- Function to initialize store order types
 CREATE OR REPLACE FUNCTION initialize_store_order_types()
@@ -133,3 +146,47 @@ CREATE TRIGGER trigger_initialize_store_order_types
 AFTER INSERT ON stores
 FOR EACH ROW
 EXECUTE FUNCTION initialize_store_order_types();
+
+-- Function to initialize store order statuses
+CREATE OR REPLACE FUNCTION initialize_store_order_statuses()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO store_order_statuses (store_id, status, is_active)
+    VALUES 
+        (NEW.id, 'pending', TRUE),
+        (NEW.id, 'accepted', TRUE),
+        (NEW.id, 'ready_for_delivery', TRUE),
+        (NEW.id, 'completed', TRUE);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically initialize order statuses when a new store is created
+CREATE TRIGGER trigger_initialize_store_order_statuses
+AFTER INSERT ON stores
+FOR EACH ROW
+EXECUTE FUNCTION initialize_store_order_statuses();
+
+-- Function to update order status timestamps
+CREATE OR REPLACE FUNCTION update_order_status_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'pending' THEN
+        NEW.pending_time = CURRENT_TIMESTAMP;
+    ELSIF NEW.status = 'accepted' THEN
+        NEW.accepted_time = CURRENT_TIMESTAMP;
+    ELSIF NEW.status = 'ready_for_delivery' THEN
+        NEW.ready_for_delivery_time = CURRENT_TIMESTAMP;
+    ELSIF NEW.status = 'completed' THEN
+        NEW.completed_time = CURRENT_TIMESTAMP;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically update status timestamps when order status changes
+CREATE TRIGGER trigger_update_order_status_timestamp
+BEFORE UPDATE OF status ON orders
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION update_order_status_timestamp();
